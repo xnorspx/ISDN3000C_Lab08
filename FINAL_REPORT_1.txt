@@ -1,0 +1,96 @@
+================================================================================
+PART 3 FINAL CHALLENGE - Phase I 
+================================================================================
+
+Step 3.1 to 3.4
+
+================================================================================
+SECTION 1: PROBLEM STATEMENT & APPROACH
+================================================================================
+
+1.1 Problem Statement
+─────────────────────
+Build a CNN to classify food images into 5 categories in Food-101 dataset('pizza', 'steak', 'sushi', 'chicken_wings', 'caesar_salad') with >80% accuracy 
+using efficient training on GPU with early stopping. Target training time is under 30 minutes on Nvidia 4080s GPU.
+
+1.2 Approach
+────────────────────
+We started with a custom CNN with 4 conv blocks (32→64→128→256 filters),
+trained with Adam optimizer with a learning rate of 0.001 and a weight decay factor of 1e-4,
+using basic augmentation techniques including resise, flip, rotation, color jitter, random affine for the training set,
+and early stopping that counts on val accuracy.
+
+================================================================================
+SECTION 2: IMPLEMENTATION DETAILS
+================================================================================
+
+2.1 Model Architecture
+──────────────────────
+Describe the baseline model in step 3.2:
+
+a) Architecture Choice: [Custom CNN / Transfer Learning / Hybrid]
+Custom CNN with 4 convolutional blocks with batch normalization.
+Progressive filter expansion: 32→64→128→256.
+Global average pooling to reduce dimensions.
+Two fully connected layers (512, 256) with dropout rate of 0.5.
+Total: 1464581 parameters.
+
+2.2 Data Pipeline
+─────────────────
+Describe your data handling:
+
+a) Data Augmentation:
+Applied random horizontal/vertical flips, rotation (max 15°),
+color jitter(brightness=0.2, contrast=0.2, saturation=0.2),
+affine transformations(degrees=0, translate=(0.1, 0.1)).
+
+Random horizontal, vertical flips alongside with rotation and affine transformation is
+to ensure the center, orientation of the object in the image is random preventing the model
+to learn that pattern as part of the consideration in categorization. So as color jittle to
+improve the robustness of the model for handling images produced by different capture settings
+or device by introducing a color shift to add randomness to the images brightness, contrast, and saturation.
+
+b) Data Preprocessing:
+Resized all images to 224×224 (from 512×512).
+Normalized using ImageNet statistics (mean, std).
+Used 75/25 train/test split (75,750 / 25,250 samples).
+Batch size: 96 (16GB VRAM, prioritizing speed)."
+
+2.3 Training Configuration
+──────────────────────────
+Document your training setup:
+
+a) Hyperparameters:
+Adam optimizer with LR=0.001, no weight decay.
+CrossEntropyLoss for multi-class classification.
+Batch size: 96, max epochs: 15.
+
+Adam optimizer provides adaptive learning rates per parameter, efficiently handling
+sparse gradients common in image data. LR=0.001 is a standard starting point that balances
+convergence speed and stability. Batch size of 96 maximizes GPU utilization (16GB VRAM) while
+maintaining training speed. CrossEntropyLoss is the standard choice for multi-class classification,
+combining softmax and negative log-likelihood in a numerically stable way.
+
+b) Regularization:
+Dropout: 0.5 in FC layers, 0.5 * 0.3 in conv blocks.
+Weight decay: 1e-4 (L2 regularization).
+Early stopping patience: 5 epochs.
+Gradient clipping: max_norm=1.0.
+
+Dropout (0.5 in FC, 0.15 in conv) prevents overfitting by randomly deactivating neurons,
+forcing the network to learn robust features. Higher dropout in FC layers targets the most
+overfit-prone area. Weight decay (1e-4) penalizes large weights, promoting simpler models that
+generalize better. Early stopping (patience=5) prevents overfitting by halting training when
+validation performance plateaus. Gradient clipping (max_norm=1.0) prevents exploding gradients,
+ensuring stable training especially with aggressive augmentation.
+
+c) Learning Rate Schedule:
+Used ReduceLROnPlateau: reduce LR by 0.5x when loss plateaus.
+Patience: 3 epochs, minimum LR: 1e-6.
+
+ReduceLROnPlateau dynamically adjusts learning rate when progress stalls, allowing
+the model to escape local minima and fine-tune parameters. Factor of 0.5 provides gradual
+reduction, while patience=3 ensures we don't reduce too hastily. Minimum LR=1e-6 prevents
+the learning rate from becoming too small to make meaningful updates.
+
+================================================================================
